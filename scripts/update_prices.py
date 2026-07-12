@@ -171,18 +171,20 @@ def main():
     # the chart moves ~1h after each market's close regardless of the Sydney
     # day of week. NYSE/LSE Friday closes land Saturday morning Sydney and
     # produce a Saturday point that completes the global trading week.
-    entry = {
-        "date": now_syd.strftime("%Y-%m-%d"),
-        "au": data["tiles"]["AU"],
-        "us": data["tiles"]["US"],
-        "uk": data["tiles"]["UK"],
-        "total_aud": data["tiles"]["TOTAL_AUD"],
-        "usdaud": data["fx"]["USDAUD"],
-        "gbpaud": data["fx"]["GBPAUD"],
-    }
-    data["history"] = [e for e in data["history"] if e["date"] != entry["date"]]
-    data["history"].append(entry)
-    data["history"].sort(key=lambda e: e["date"])
+    # (No entry while the portfolio is empty — a $0 point would be noise.)
+    if holdings:
+        entry = {
+            "date": now_syd.strftime("%Y-%m-%d"),
+            "au": data["tiles"]["AU"],
+            "us": data["tiles"]["US"],
+            "uk": data["tiles"]["UK"],
+            "total_aud": data["tiles"]["TOTAL_AUD"],
+            "usdaud": data["fx"]["USDAUD"],
+            "gbpaud": data["fx"]["GBPAUD"],
+        }
+        data["history"] = [e for e in data["history"] if e["date"] != entry["date"]]
+        data["history"].append(entry)
+        data["history"].sort(key=lambda e: e["date"])
 
     data["updated_at"] = now_syd.isoformat(timespec="seconds")
 
