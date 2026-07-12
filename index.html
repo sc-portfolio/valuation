@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Skier Capital Daily Valuation</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛷️</text></svg>">
+<style>
+:root{
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7;
+  --series-1:#2a78d6; --series-wash:rgba(42,120,214,.10);
+  --delta-up:#006300; --delta-down:#d03b3b;
+  --border:rgba(11,11,11,.10);
+  --btn:#2a78d6; --btn-ink:#fff;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --axis:#383835;
+    --series-1:#3987e5; --series-wash:rgba(57,135,229,.12);
+    --delta-up:#0ca30c; --delta-down:#e66767;
+    --border:rgba(255,255,255,.10);
+    --btn:#3987e5;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink-1);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:980px;margin:0 auto;padding:16px 14px 48px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:8px 2px 16px}
+h1{font-size:20px;font-weight:650;margin:0}
+#updated{color:var(--ink-3);font-size:13px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-bottom:14px}
+h2{font-size:14px;font-weight:600;color:var(--ink-2);margin:0 0 10px}
+/* ---- tiles ---- */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.tile .label{font-size:13px;color:var(--ink-2)}
+.tile .value{font-size:clamp(18px,5.2vw,24px);font-weight:600;margin-top:2px;white-space:nowrap}
+@media(min-width:700px){.tile .value{font-size:clamp(18px,2.2vw,24px)}}
+.tile .delta{font-size:12.5px;margin-top:3px;color:var(--ink-3)}
+.tile .asof{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.tile .delta.up{color:var(--delta-up)} .tile .delta.down{color:var(--delta-down)}
+.tile.total{border-color:var(--series-1)}
+/* ---- chart ---- */
+#chartbox{position:relative}
+#tooltip{position:absolute;pointer-events:none;display:none;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12);
+  padding:6px 9px;font-size:12.5px;white-space:nowrap;z-index:5}
+#tooltip .tt-date{color:var(--ink-3)}
+#tooltip .tt-val{font-weight:600}
+.chart-empty{color:var(--ink-3);font-size:13.5px;padding:18px 0}
+details.datatable{margin-top:8px;font-size:13px}
+details.datatable summary{cursor:pointer;color:var(--ink-3)}
+/* ---- tables ---- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{color:var(--ink-3);font-weight:500;text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid)}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 8px;border-bottom:1px solid var(--grid);text-align:right;
+  font-variant-numeric:tabular-nums}
+td .name{display:block;color:var(--ink-3);font-size:12px;font-weight:400}
+tr.mkt td{color:var(--ink-2);font-weight:600;text-align:left;background:transparent;
+  border-bottom:1px solid var(--grid);padding-top:12px;font-variant-numeric:normal}
+td.up{color:var(--delta-up)} td.down{color:var(--delta-down)}
+.scroll{overflow-x:auto}
+/* ---- form ---- */
+form.add{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(min-width:700px){form.add{grid-template-columns:110px 1fr 1fr 1fr auto}}
+input,select,button{font:inherit;border-radius:8px;border:1px solid var(--axis);
+  padding:8px 10px;background:var(--surface-1);color:var(--ink-1)}
+input:focus,select:focus{outline:2px solid var(--series-1);outline-offset:0}
+button{cursor:pointer;border:none;background:var(--btn);color:var(--btn-ink);font-weight:600}
+button.ghost{background:transparent;color:var(--series-1);border:1px solid var(--axis);font-weight:500}
+button.danger{background:transparent;border:none;color:var(--delta-down);padding:4px 6px}
+button:disabled{opacity:.5;cursor:default}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+#status{font-size:13px;color:var(--ink-2);margin-top:8px;min-height:1.2em}
+#status.err{color:var(--delta-down)}
+.hint{font-size:12.5px;color:var(--ink-3);margin:4px 0 0}
+details.setup{margin-top:12px;font-size:13.5px;color:var(--ink-2)}
+details.setup summary{cursor:pointer;font-weight:600}
+details.setup ol{padding-left:20px}
+details.setup input{width:100%;margin-top:6px}
+code{background:var(--page);border:1px solid var(--grid);border-radius:4px;padding:0 4px;font-size:12.5px}
+.pending{color:var(--ink-3);font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Skier Capital Daily Valuation</h1>
+  <span id="updated">loading…</span>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2>Running total — AUD, updated after each market's close</h2>
+  <div id="chartbox"></div>
+  <details class="datatable" id="histtable"><summary>View history as a table</summary></details>
+</div>
+
+<div class="card">
+  <h2>Holdings</h2>
+  <div class="scroll" id="holdingsbox"></div>
+</div>
+
+<div class="card">
+  <h2>Manage holdings</h2>
+  <form class="add" id="addform">
+    <select id="f-market" aria-label="Market">
+      <option value="AU">Australia</option>
+      <option value="US">USA</option>
+      <option value="UK">UK</option>
+    </select>
+    <input id="f-code" placeholder="Code e.g. BHP" autocapitalize="characters" required>
+    <input id="f-qty" placeholder="Quantity" type="number" step="any" min="0" required>
+    <input id="f-price" placeholder="Purchase price" type="number" step="any" min="0" required>
+    <button type="submit">Add</button>
+  </form>
+  <p class="hint">Purchase price is per share in the market's own currency — A$ for ASX, US$ for USA, and <strong>pounds</strong> for UK (e.g. 7.42, not 742 pence).</p>
+  <div class="rowbtns">
+    <button id="save" disabled>Save &amp; publish changes</button>
+    <button id="refresh" class="ghost">Fetch latest prices now</button>
+  </div>
+  <div id="status" role="status"></div>
+  <details class="setup" id="setup">
+    <summary>Access token (needed once per device to save changes)</summary>
+    <p>Saving writes to your GitHub repository, which needs a fine-grained personal
+    access token. In GitHub: <em>Settings → Developer settings → Personal access
+    tokens → Fine-grained tokens → Generate new token</em>. Give it access to
+    <strong>only this repository</strong> with <em>Contents: Read and write</em> and
+    <em>Actions: Read and write</em> permissions. Paste it below — it is stored only
+    in this device's browser.</p>
+    <input id="token" type="password" placeholder="github_pat_…" autocomplete="off">
+  </details>
+</div>
+
+<p class="hint" id="schednote">Australian tile in AUD, USA in USD, UK in GBP; the
+Total converts everything to AUD at the day's exchange rates. Each market is
+checked about an hour after its own close — ASX ~5pm Sydney, London ~2:30am,
+New York ~7–9am Sydney the next morning.</p>
+</div>
+
+<script>
+"use strict";
+/* ---------- state ---------- */
+let DATA = null;          // data.json (prices, fx, tiles, history)
+let HOLDINGS = [];        // editable copy of holdings.json
+let SHA = null;           // git blob sha of holdings.json
+let dirty = false;
+
+const MKT = {AU:{label:"Australia",ccy:"AUD",suffix:".AX"},
+             US:{label:"USA",ccy:"USD",suffix:""},
+             UK:{label:"UK",ccy:"GBP",suffix:".L"}};
+
+const $ = id => document.getElementById(id);
+
+/* ---------- repo detection (owner.github.io/repo/) ---------- */
+function repoInfo(){
+  const saved = localStorage.getItem("scdv_repo");
+  if (saved) return JSON.parse(saved);
+  const host = location.hostname, path = location.pathname.split("/").filter(Boolean);
+  if (host.endsWith(".github.io") && path.length)
+    return {owner: host.replace(".github.io",""), repo: path[0]};
+  return null;
+}
+
+/* ---------- formatting ---------- */
+const SYM = {AUD:"A$", USD:"US$", GBP:"£"};
+function money(v, ccy, compact){
+  if (v == null || isNaN(v)) return "—";
+  return SYM[ccy] + v.toLocaleString("en-AU",
+    {minimumFractionDigits: compact?0:2, maximumFractionDigits: compact?0:2});
+}
+const fmtDate = d => new Date(d+"T12:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short"});
+
+/* ---------- load ---------- */
+async function load(){
+  const bust = "?t=" + Math.floor(Date.now()/60000);
+  try{
+    const [dRes, hRes] = await Promise.all([
+      fetch("data.json"+bust, {cache:"no-store"}),
+      fetch("holdings.json"+bust, {cache:"no-store"})
+    ]);
+    DATA = await dRes.json();
+    HOLDINGS = (await hRes.json()).holdings || [];
+  }catch(e){
+    $("updated").textContent = "couldn't load data — " + e.message;
+    return;
+  }
+  $("updated").textContent = DATA.updated_at
+    ? "prices as at " + new Date(DATA.updated_at).toLocaleString("en-AU",
+        {day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})
+    : "no prices yet — use “Fetch latest prices now”";
+  renderAll();
+}
+
+/* ---------- derived values ---------- */
+function quote(h){
+  const sym = h.code.toUpperCase() + MKT[h.market].suffix;
+  return (DATA && DATA.prices && DATA.prices[sym]) || null;
+}
+function subtotals(){
+  const s = {AU:0, US:0, UK:0}; let missing = 0;
+  for (const h of HOLDINGS){
+    const q = quote(h);
+    if (q) s[h.market] += q.price * h.quantity; else missing++;
+  }
+  return {s, missing};
+}
+function toAUD(m, v){
+  if (!DATA || !DATA.fx) return null;
+  const r = m==="AU" ? 1 : m==="US" ? DATA.fx.USDAUD : DATA.fx.GBPAUD;
+  return r ? v*r : null;
+}
+
+/* ---------- tiles ---------- */
+function renderTiles(){
+  const {s} = subtotals();
+  const totalAUD = ["AU","US","UK"].reduce((t,m)=>t+(toAUD(m,s[m])||0),0);
+  const hist = DATA.history||[];
+  const prev = hist.length>1 ? hist[hist.length-2] : null;
+  const cur  = hist.length   ? hist[hist.length-1] : null;
+  const tiles = [
+    {key:"AU", label:"Australia", ccy:"AUD", v:s.AU, pv:prev&&prev.au, cv:cur&&cur.au},
+    {key:"US", label:"USA",       ccy:"USD", v:s.US, pv:prev&&prev.us, cv:cur&&cur.us},
+    {key:"UK", label:"UK",        ccy:"GBP", v:s.UK, pv:prev&&prev.uk, cv:cur&&cur.uk},
+    {key:"T",  label:"Total (AUD)", ccy:"AUD", v:totalAUD, pv:prev&&prev.total_aud, cv:cur&&cur.total_aud, total:true},
+  ];
+  const checked = DATA.checked || {};
+  $("tiles").innerHTML = tiles.map(t=>{
+    let delta = "";
+    if (t.pv != null && t.cv != null && t.pv !== 0){
+      const d = t.cv - t.pv, pc = 100*d/t.pv, cls = d>=0?"up":"down", sign = d>=0?"+":"−";
+      delta = `<div class="delta ${cls}">${sign}${money(Math.abs(d),t.ccy,true)} (${sign}${Math.abs(pc).toFixed(2)}%) vs prev. day</div>`;
+    } else delta = `<div class="delta">day change after two snapshots</div>`;
+    const ts = t.key!=="T" && checked[t.key] ? `<div class="asof">close checked ${
+      new Date(checked[t.key]).toLocaleString("en-AU",{weekday:"short",hour:"numeric",minute:"2-digit"})}</div>` : "";
+    return `<div class="tile${t.total?" total":""}">
+      <div class="label">${t.label}</div>
+      <div class="value">${money(t.v,t.ccy,true)}</div>${delta}${ts}</div>`;
+  }).join("");
+}
+
+/* ---------- holdings table ---------- */
+function renderHoldings(){
+  if (!HOLDINGS.length){
+    $("holdingsbox").innerHTML = `<p class="chart-empty">No holdings yet — add your first share below.</p>`;
+    return;
+  }
+  let rows = `<table><thead><tr><th>Share</th><th>Qty</th><th>Paid</th>
+    <th>Last close</th><th>Value</th><th>Gain</th><th></th></tr></thead><tbody>`;
+  for (const m of ["AU","US","UK"]){
+    const hs = HOLDINGS.map((h,i)=>({h,i})).filter(x=>x.h.market===m);
+    if (!hs.length) continue;
+    rows += `<tr class="mkt"><td colspan="7">${MKT[m].label}</td></tr>`;
+    for (const {h,i} of hs){
+      const q = quote(h), ccy = MKT[m].ccy;
+      const val = q ? q.price*h.quantity : null;
+      const gain = q ? (q.price-h.purchase_price)*h.quantity : null;
+      const gpc  = q && h.purchase_price ? 100*(q.price/h.purchase_price-1) : null;
+      rows += `<tr>
+        <td><strong>${h.code.toUpperCase()}</strong>${q&&q.name&&q.name!==h.code.toUpperCase()?`<span class="name">${q.name}</span>`:""}</td>
+        <td>${h.quantity.toLocaleString("en-AU")}</td>
+        <td>${money(h.purchase_price,ccy)}</td>
+        <td>${q?money(q.price,ccy):`<span class="pending">pending</span>`}</td>
+        <td>${q?money(val,ccy):"—"}</td>
+        <td class="${gain==null?"":gain>=0?"up":"down"}">${gain==null?"—":
+          (gain>=0?"+":"−")+money(Math.abs(gain),ccy,true)+(gpc!=null?` (${gain>=0?"+":"−"}${Math.abs(gpc).toFixed(1)}%)`:"")}</td>
+        <td><button class="danger" data-del="${i}" title="Remove ${h.code}">✕</button></td>
+      </tr>`;
+    }
+  }
+  $("holdingsbox").innerHTML = rows + "</tbody></table>";
+  $("holdingsbox").querySelectorAll("[data-del]").forEach(b=>
+    b.addEventListener("click", ()=>{ HOLDINGS.splice(+b.dataset.del,1); markDirty(); renderAll(); }));
+}
+
+/* ---------- chart (single-series line, hover crosshair) ---------- */
+function renderChart(){
+  const box = $("chartbox");
+  const hist = (DATA.history||[]).filter(e=>e.total_aud!=null);
+  if (hist.length < 2){
+    box.innerHTML = `<p class="chart-empty">The running total appears here after the
+      first two 4:30pm snapshots${hist.length? " — first one recorded " + fmtDate(hist[0].date):""}.</p>`;
+    renderHistTable(hist);
+    return;
+  }
+  // Render at the container's real pixel width so text stays readable on phones.
+  const W = Math.max(300, Math.round(box.clientWidth || box.parentElement.clientWidth || 920));
+  const H = W < 500 ? 220 : 260, L=52, R=14, T=14, B=30, pw=W-L-R, ph=H-T-B;
+  const vals = hist.map(e=>e.total_aud);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (lo===hi){ lo*=0.98; hi*=1.02; }
+  const pad=(hi-lo)*0.08; lo-=pad; hi+=pad; if(lo<0)lo=0;
+  // clean y ticks
+  const step = niceStep((hi-lo)/3);
+  const t0 = Math.ceil(lo/step)*step, ticks=[];
+  for(let v=t0; v<=hi; v+=step) ticks.push(v);
+  const X = i => L + pw*(hist.length===1?0.5:i/(hist.length-1));
+  const Y = v => T + ph*(1-(v-lo)/(hi-lo));
+  const pts = hist.map((e,i)=>[X(i),Y(e.total_aud)]);
+  const path = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area = path + ` L${pts[pts.length-1][0].toFixed(1)} ${T+ph} L${pts[0][0].toFixed(1)} ${T+ph} Z`;
+  // x labels: 3–4 evenly spaced, ends anchored inward so nothing clips
+  const n = hist.length;
+  const xIdx = W < 500 ? [...new Set([0, Math.round((n-1)/2), n-1])]
+                       : [...new Set([0, Math.round((n-1)/3), Math.round(2*(n-1)/3), n-1])];
+  const xAnchor = i => i===0 ? "start" : i===n-1 ? "end" : "middle";
+  const compact = v => v>=1e6 ? "$"+(v/1e6).toFixed(1)+"M" : v>=1e3 ? "$"+Math.round(v/1e3)+"K" : "$"+Math.round(v);
+  box.innerHTML = `
+  <svg id="chart" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img"
+       aria-label="Running total of the portfolio in Australian dollars over time">
+    ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)" stroke-width="1"/>
+      <text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="11.5" fill="var(--ink-3)"
+        style="font-variant-numeric:tabular-nums">${compact(v)}</text>`).join("")}
+    <line x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1"/>
+    ${xIdx.map(i=>`<text x="${X(i)}" y="${H-8}" text-anchor="${xAnchor(i)}" font-size="11.5" fill="var(--ink-3)">${fmtDate(hist[i].date)}</text>`).join("")}
+    <path d="${area}" fill="var(--series-wash)"/>
+    <path d="${path}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${pts[n-1][0]}" cy="${pts[n-1][1]}" r="4.5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"/>
+    <text x="${Math.min(pts[n-1][0], W-R-4)}" y="${Math.max(pts[n-1][1]-10, 12)}" text-anchor="end" font-size="12"
+      font-weight="600" fill="var(--ink-1)">${money(vals[n-1],"AUD",true)}</text>
+    <line id="xhair" y1="${T}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>
+    <circle id="hoverdot" r="4.5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2" visibility="hidden"/>
+    <rect x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent" id="hover"/>
+  </svg>
+  <div id="tooltip"></div>`;
+  // hover
+  const svg = $("chart"), tip = $("tooltip"), hov = $("hover"),
+        xh = $("xhair"), hd = $("hoverdot");
+  function onMove(ev){
+    const r = svg.getBoundingClientRect(), sx = W/r.width;
+    const mx = (ev.clientX - r.left)*sx;
+    let i = Math.round((mx-L)/(pw/(n-1))); i = Math.max(0, Math.min(n-1, i));
+    const [px,py] = pts[i], e = hist[i];
+    xh.setAttribute("x1",px); xh.setAttribute("x2",px); xh.setAttribute("visibility","visible");
+    hd.setAttribute("cx",px); hd.setAttribute("cy",py); hd.setAttribute("visibility","visible");
+    tip.innerHTML = `<span class="tt-date">${new Date(e.date+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</span><br>
+      <span class="tt-val">${money(e.total_aud,"AUD",true)}</span><br>
+      <span class="tt-date">AU ${money(e.au,"AUD",true)} · US ${money(e.us,"USD",true)} · UK ${money(e.uk,"GBP",true)}</span>`;
+    tip.style.display = "block";
+    const bw = box.clientWidth, tx = px/sx;
+    tip.style.left = Math.min(Math.max(tx - tip.offsetWidth/2, 0), bw - tip.offsetWidth) + "px";
+    tip.style.top  = (py/sx - tip.offsetHeight - 12) + "px";
+  }
+  function onLeave(){ tip.style.display="none"; xh.setAttribute("visibility","hidden"); hd.setAttribute("visibility","hidden"); }
+  hov.addEventListener("pointermove", onMove);
+  hov.addEventListener("pointerleave", onLeave);
+  renderHistTable(hist);
+}
+function niceStep(raw){
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1,2,2.5,5,10]) if (raw <= m*mag) return m*mag;
+  return 10*mag;
+}
+function renderHistTable(hist){
+  const el = $("histtable");
+  const body = hist.length ? `<div class="scroll"><table><thead><tr><th>Date</th><th>Australia (A$)</th>
+    <th>USA (US$)</th><th>UK (£)</th><th>Total (A$)</th></tr></thead><tbody>` +
+    [...hist].reverse().map(e=>`<tr><td>${e.date}</td><td>${money(e.au,"AUD")}</td>
+      <td>${money(e.us,"USD")}</td><td>${money(e.uk,"GBP")}</td><td>${money(e.total_aud,"AUD")}</td></tr>`).join("")
+    + "</tbody></table></div>" : "<p class='chart-empty'>No history yet.</p>";
+  el.innerHTML = "<summary>View history as a table</summary>" + body;
+}
+
+function renderAll(){ renderTiles(); renderHoldings(); renderChart(); }
+let rsz; window.addEventListener("resize", ()=>{ clearTimeout(rsz); rsz=setTimeout(()=>DATA&&renderChart(),200); });
+
+/* ---------- editing & publishing ---------- */
+function markDirty(){ dirty = true; $("save").disabled = false;
+  setStatus("Unsaved changes — press “Save & publish changes” to make them permanent."); }
+function setStatus(msg, err){ const s=$("status"); s.textContent=msg; s.className = err?"err":""; }
+
+$("addform").addEventListener("submit", ev=>{
+  ev.preventDefault();
+  const code = $("f-code").value.trim().toUpperCase().replace(/\.(AX|L)$/i,"");
+  const h = {market: $("f-market").value, code,
+             quantity: parseFloat($("f-qty").value),
+             purchase_price: parseFloat($("f-price").value)};
+  if (!code || !(h.quantity>0) || !(h.purchase_price>=0)) return;
+  if (h.market==="UK" && h.purchase_price > 100 &&
+      !confirm(`£${h.purchase_price} per share — UK prices should be in pounds, not pence. Keep this value?`)) return;
+  HOLDINGS.push(h);
+  ev.target.reset(); markDirty(); renderAll();
+});
+
+function token(){ return localStorage.getItem("scdv_token") || ""; }
+$("token").value = token();
+$("token").addEventListener("change", ()=> localStorage.setItem("scdv_token", $("token").value.trim()));
+
+async function gh(path, opts={}){
+  const info = repoInfo();
+  if (!info) throw new Error("Can't work out the repository from this URL. Open the page from its github.io address.");
+  const res = await fetch(`https://api.github.com/repos/${info.owner}/${info.repo}${path}`, {
+    ...opts,
+    headers: {"Accept":"application/vnd.github+json",
+              "Authorization":"Bearer "+token(),
+              "X-GitHub-Api-Version":"2022-11-28", ...(opts.headers||{})}
+  });
+  if (!res.ok){
+    let msg = res.status+"";
+    try{ msg += " — " + (await res.json()).message; }catch(e){}
+    throw new Error(msg);
+  }
+  return res.status===204 ? null : res.json();
+}
+
+$("save").addEventListener("click", async ()=>{
+  if (!token()){ $("setup").open = true; setStatus("Paste your access token first (one-time setup below).", true); return; }
+  $("save").disabled = true; setStatus("Saving holdings…");
+  try{
+    const cur = await gh("/contents/holdings.json?ref=main");
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify({holdings: HOLDINGS}, null, 1)+"\n")));
+    await gh("/contents/holdings.json", {method:"PUT", body: JSON.stringify({
+      message:"Update holdings", content, sha: cur.sha, branch:"main"})});
+    dirty = false;
+    setStatus("Saved. Fetching fresh prices — new values appear here in 2–3 minutes.");
+    await gh("/actions/workflows/daily-valuation.yml/dispatches",
+             {method:"POST", body: JSON.stringify({ref:"main"})});
+    setTimeout(load, 180000);
+  }catch(e){
+    $("save").disabled = false;
+    setStatus("Save failed: "+e.message, true);
+  }
+});
+
+$("refresh").addEventListener("click", async ()=>{
+  if (!token()){ $("setup").open = true; setStatus("Paste your access token first (one-time setup below).", true); return; }
+  setStatus("Asked for fresh prices — they'll appear here in 2–3 minutes.");
+  try{
+    await gh("/actions/workflows/daily-valuation.yml/dispatches",
+             {method:"POST", body: JSON.stringify({ref:"main"})});
+    setTimeout(load, 180000);
+  }catch(e){ setStatus("Couldn't start the update: "+e.message, true); }
+});
+
+window.addEventListener("beforeunload", ev=>{ if (dirty){ ev.preventDefault(); ev.returnValue=""; }});
+load();
+</script>
+</body>
+</html>

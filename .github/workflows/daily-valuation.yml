@@ -1,0 +1,50 @@
+name: Daily valuation snapshot
+
+on:
+  schedule:
+    # Each market is checked ~1h after its own close. Two UTC times per
+    # market cover daylight saving; the script consults each market's local
+    # clock and only updates the ones actually due, so the extras no-op.
+    - cron: "0 6 * * 1-5"    # 5:00pm Sydney during AEDT (ASX)
+    - cron: "0 7 * * 1-5"    # 5:00pm Sydney during AEST (ASX)
+    - cron: "30 16 * * 1-5"  # 5:30pm London during BST (LSE)
+    - cron: "30 17 * * 1-5"  # 5:30pm London during GMT (LSE)
+    - cron: "0 21 * * 1-5"   # 5:00pm New York during EDT (NYSE)
+    - cron: "0 22 * * 1-5"   # 5:00pm New York during EST (NYSE)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-valuation
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install yfinance
+
+      - name: Fetch prices and update valuation
+        run: python scripts/update_prices.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "valuation-bot"
+          git config user.email "actions@github.com"
+          git add data.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Daily valuation $(date -u +%F)"
+            git pull --rebase origin main
+            git push
+          fi
