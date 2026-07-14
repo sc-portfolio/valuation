@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Skier Capital Daily Valuation — per-market price checks.
+"""Skier Capital Valuation — per-market price checks.
 
 Each market is checked ~1 hour after its own close:
   ASX  — 5:00pm Sydney      (close 4:00pm)

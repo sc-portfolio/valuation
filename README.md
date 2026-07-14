@@ -1,4 +1,4 @@
-# Skier Capital Daily Valuation
+# Skier Capital Valuation
 
 A private-use portfolio valuation page for ASX, US and LSE holdings.
 
