@@ -9,37 +9,47 @@
    "price": 2.65,
    "currency": "AUD",
    "name": "DIGICO INF STAPLED [DGT]"
+  },
+  "PSN.L": {
+   "price": 10.755,
+   "currency": "GBP",
+   "name": "Persimmon Plc"
+  },
+  "RMV.L": {
+   "price": 4.396,
+   "currency": "GBP",
+   "name": "Rightmove plc"
   }
  },
  "fx": {
-  "USDAUD": 1.4304,
-  "GBPAUD": 1.91669
+  "USDAUD": 1.4302,
+  "GBPAUD": 1.91679
  },
  "tiles": {
   "AU": 20769950.0,
   "US": 0.0,
-  "UK": 0.0,
-  "TOTAL_AUD": 20769950.0
+  "UK": 6696300.0,
+  "TOTAL_AUD": 33605350.93
  },
  "checked": {
-  "AU": "2026-07-15T19:09:13+10:00",
-  "US": "2026-07-15T19:09:13+10:00",
-  "UK": "2026-07-15T19:09:13+10:00"
+  "AU": "2026-07-15T19:11:13+10:00",
+  "US": "2026-07-15T19:11:13+10:00",
+  "UK": "2026-07-15T19:11:13+10:00"
  },
  "history": [
   {
    "date": "2026-07-15",
    "au": 20769950.0,
    "us": 0.0,
-   "uk": 0.0,
-   "total_aud": 20769950.0,
-   "usdaud": 1.4304,
-   "gbpaud": 1.91669
+   "uk": 6696300.0,
+   "total_aud": 33605350.93,
+   "usdaud": 1.4302,
+   "gbpaud": 1.91679
   }
  ],
  "errors": [
   "TUAS.AX: no price data for TUAS.AX",
   "SGO.L: no price data for SGO.L"
  ],
- "updated_at": "2026-07-15T19:09:13+10:00"
+ "updated_at": "2026-07-15T19:11:13+10:00"
 }
