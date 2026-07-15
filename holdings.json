@@ -5,6 +5,18 @@
    "code": "HMC",
    "quantity": 7000000,
    "purchase_price": 2.97
+  },
+  {
+   "market": "AU",
+   "code": "DGT",
+   "quantity": 283000,
+   "purchase_price": 2.44
+  },
+  {
+   "market": "AU",
+   "code": "TUAS",
+   "quantity": 500000,
+   "purchase_price": 2.27
   }
  ]
 }
