@@ -17,6 +17,12 @@
    "code": "TUAS",
    "quantity": 500000,
    "purchase_price": 2.27
+  },
+  {
+   "market": "UK",
+   "code": "SGO",
+   "quantity": 20000,
+   "purchase_price": 79.16
   }
  ]
 }
