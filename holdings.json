@@ -23,6 +23,18 @@
    "code": "SGO",
    "quantity": 20000,
    "purchase_price": 79.16
+  },
+  {
+   "market": "UK",
+   "code": "PSN",
+   "quantity": 500000,
+   "purchase_price": 10.5
+  },
+  {
+   "market": "UK",
+   "code": "RMV",
+   "quantity": 300000,
+   "purchase_price": 4.4
   }
  ]
 }
