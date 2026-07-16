@@ -1,40 +1,64 @@
 {
  "prices": {
   "HMC.AX": {
-   "price": 2.92,
+   "price": 2.94,
    "currency": "AUD",
    "name": "HMC Capital Limited"
   },
   "DGT.AX": {
-   "price": 2.66,
+   "price": 2.65,
    "currency": "AUD",
    "name": "DIGICO INF STAPLED [DGT]"
   },
+  "TUA.AX": {
+   "price": 2.32,
+   "currency": "AUD",
+   "name": "Tuas Limited"
+  },
+  "SGO.PA": {
+   "price": 76.82,
+   "currency": "EUR",
+   "name": "Compagnie de Saint-Gobain S.A."
+  },
   "PSN.L": {
-   "price": 10.525,
+   "price": 10.915,
    "currency": "GBP",
    "name": "Persimmon Plc"
   },
   "RMV.L": {
-   "price": 4.404,
+   "price": 4.489,
    "currency": "GBP",
    "name": "Rightmove plc"
   }
  },
  "fx": {
-  "USDAUD": 1.429,
-  "GBPAUD": 1.9343
+  "AUDAUD": 1.0,
+  "USDAUD": 1.4292,
+  "GBPAUD": 1.93322,
+  "EURAUD": 1.63883,
+  "HKDAUD": 0.18232,
+  "SGDAUD": 1.10907,
+  "JPYAUD": 0.008812
  },
  "tiles": {
-  "AU": 21192780.0,
+  "AU": 22489950.0,
   "US": 0.0,
-  "UK": 6583700.0,
-  "TOTAL_AUD": 33927630.55
+  "UK": 6804200.0,
+  "EU": 1536400.0,
+  "ASIA_AUD": 0.0,
+  "TOTAL_AUD": 38161864.05
  },
  "checked": {
-  "AU": "2026-07-16T15:52:02+10:00",
-  "US": "2026-07-16T15:52:02+10:00",
-  "UK": "2026-07-16T15:52:02+10:00"
+  "AU": "2026-07-16T18:17:00+10:00",
+  "US": "2026-07-16T18:17:00+10:00",
+  "UK": "2026-07-16T18:17:00+10:00",
+  "FR": "2026-07-16T18:17:00+10:00",
+  "NL": "2026-07-16T18:17:00+10:00",
+  "BE": "2026-07-16T18:17:00+10:00",
+  "DE": "2026-07-16T18:17:00+10:00",
+  "HK": "2026-07-16T18:17:00+10:00",
+  "SG": "2026-07-16T18:17:00+10:00",
+  "JP": "2026-07-16T18:17:00+10:00"
  },
  "history": [
   {
@@ -48,17 +72,22 @@
   },
   {
    "date": "2026-07-16",
-   "au": 21192780.0,
+   "au": 22489950.0,
    "us": 0.0,
-   "uk": 6583700.0,
-   "total_aud": 33927630.55,
-   "usdaud": 1.429,
-   "gbpaud": 1.9343
+   "uk": 6804200.0,
+   "eu": 1536400.0,
+   "asia_aud": 0.0,
+   "total_aud": 38161864.05,
+   "fx": {
+    "USDAUD": 1.4292,
+    "GBPAUD": 1.93322,
+    "EURAUD": 1.63883,
+    "HKDAUD": 0.18232,
+    "SGDAUD": 1.10907,
+    "JPYAUD": 0.008812
+   }
   }
  ],
- "errors": [
-  "TUAS.AX: no price data for TUAS.AX",
-  "SGO.L: no price data for SGO.L"
- ],
- "updated_at": "2026-07-16T15:52:02+10:00"
+ "errors": [],
+ "updated_at": "2026-07-16T18:17:00+10:00"
 }
