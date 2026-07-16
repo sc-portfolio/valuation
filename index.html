@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>Skier Capital Valuation</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛷️</text></svg>">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAEF0lEQVR4nO1aTShlURz3bUq+XmbBqLFRko2NREmTEsoQUqKEQklK02Rn81bsrJRZTBIz2CgWPkIzs7SzYhqyQCQi8nHf+03/d+5597zn3fvuZfHemTm/+nXfW5zb+f/O//w/zrkxMQoKCgoKCgoKCgoxCAWPh5Hg9QK7u8D4ONDYCBQUAKmpAA0VGRsLJCREJ2NjYbrUCGU8GU1YWQGqq4Hk5OcGy8Q3b2wKoGnseXwMtLQEviQ+npFWOtIG2SXNl579/TYE0HTjf/4E8vLkNZqTz9nlAg4Owgig6cb/+AGkp7OBtHcibcRryOc/NuYzzVwAjx7s9vaA7OxA15Hd+Pp6fzC39oDHR+DDB/lXnmci+l1SAlxc+DOZtQBjY/Ibz+MV/S4tBU5Pjaxm6QHn50BuLhsYFyfXatN8xSBNz74+4OYmMLBbCjAxwQYnJrIXysDgrET/y8qA5eXnhVxYAXJyjJdEelWdMCMDKC4GBgaAjQ1jtekZZLy1ADMzwNycPFxYALa3gaMj4P7esJCqV8Hl7QsgO8hoIi/fHQug6S+QjWLPYgPmAnj0gCELg4WwKcK/uwUsAp89AVpb4WNzc/SzqQlobwc+fYIvff/6BVxe2hLCXIDycjnTIJ8zda69vcDOjmU2MBdgbc0og3k5KQtFMZKSgK4u4OTE8AZbAhAqK+XsAsVymJfx5BFbWw5KYcL6ulFiyrgVuBi8maMjvMVFn2l4egojgKarNDJi9ASRNuY15F5MItDCEjTNQgCvnkcfHoC6OkMEWT1BFOH9e3a+GXYLePTUcX0NVFWxweROMrXHweTboa3NhgCiCHd3QE9PoJoyHozyeEbc3LRZCXqE+np2FsjPN15GT/IImdIlj2eVlQ4vRjQ9MF5dAZOTQEUFkJIS+VV9Be0LIFZT3BtIlP194Ns3YHQU6O4GPn4EamsZa2qAhgZWUtOFSrSxufmFzZDXy/Kog7YzWvEyAUQEt6KRbosd8vUCEMgTQvXkEvDlAng8bBuE6bejHc4F8IZoK29vgcNDdoe4tATMzzN+/87+U+lJ3WU0cXXVd83vTABNOFig66XpaVZRFRYCaWnyFUWO0qAm1ABuN/DuXWAxJFZZwZcV0UZeyr99a0MAr57yCOTi9ClMqJ5bptXnTZHb7eADiakpY6B40CAb+bypnL+8tPmBxJcvgaseaSNeSnH++sGIuQCabjxFS34OILPxYis8POz3bmsPODszOj+ZjRePxagv4Ysb9gOJoaFA5WQ0XIxXnZ3shIsHd8st8Ps3u2rmL5LFYNFoPu/MTBbECUF3h+YCfP4s55G4uGBZWcDgIPDnj5HRgjpYcwFcrsgb4oS0TWnORUVARwfw9av/4NPfrIWAqQAKCgoKCgoKCgox/w/+AlZ3RxXVEs4ZAAAAAElFTkSuQmCC">
+<link rel="apple-touch-icon" href="icon-180.png">
 <style>
 :root{
   --surface-1:#fcfcfb; --page:#f9f9f7;
@@ -33,6 +34,7 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .wrap{max-width:980px;margin:0 auto;padding:16px 14px 48px}
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:8px 2px 16px}
 h1{font-size:20px;font-weight:650;margin:0}
+header .logo{height:24px;width:auto;align-self:center}
 #updated{color:var(--ink-3);font-size:13px}
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
   padding:16px;margin-bottom:14px}
@@ -94,6 +96,7 @@ code{background:var(--page);border:1px solid var(--grid);border-radius:4px;paddi
 <body>
 <div class="wrap">
 <header>
+  <img class="logo" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAAA4CAIAAAA+b0LvAAAACXBIWXMAAAsTAAALEwEAmpwYAAAElElEQVR4nN1aTUhUURQ+770xmcwsAw2cVZBDwViSLRIXLStyUUtpEW2khQa1EIRWIoQkBabUwhZujIhcpIFMhVAUFhQhpCmiUYuisMIIasb3xbn3zvubp45u5t0uH8MM7y3ON9+55+9eQuiybWSz6vvv35icxNWraGlBfT1274ZlgcgH00RJSbQQi1EIsZUVBoDPn3HtGo4cQTweJKMDKEhMyvXzJwtVU8MvGYZSxrL4u/wZZRjCwpoaCiE2NYWmJvWSaTKiz4c8iMX488wZCm6wkRHs2qXe0IsSeUQrLcWzZzluktidO7wLiUKihV6itbUBIJfYw4fYulVvYpaw/MABLC0JbjIkzswgkeAHpll8EzcHU1heWckZS0R7odvfvzhxwhVUX8XKyvDggUpjyidv3HAfawfDUJbv3ImxMaaTycgYQuyae/a4mmrHyhRm19XhxQs3dihuAwM6EZMpNxZzDd6yBe3tMnh4iQlux47xGyUlKk1HGYF8W1GBs2fx6pXKzzIo+rjpVSvG46itxenT6OvD+/fBAjjIra8P/f0aYHCQQ8W7d+x+DhPJyrZDKn4VJ7VbtqgQw7TyLpG79YJtryZUHrf/dxGLqwvW3F3/hW52brOtR5Lw5AkjnY40Hj3C8+eYncW3bz5Ka0YUkTGiPykwDLazuprLw+PH0dnJbJeXlYyraEhobNSyUDZNpFLo6eGBlUx0efQI3d3uBCHiCNRfhvC1RAI3b6pK0u+fhMVFVFUp3bWTzswVmadOKQF9fQCAy5e1dEvyMCRCMok3b7z0BLfv33HwoMb0DENNDBIJL73cvOTpUzUI0s4zKQcpzL59+PBBxk/PnEs2qXLLFt3QzSEm1Dt5kidAbl0i6XV1+TxYX/WuXPFwc/rWnh712BlF6AVD7KkdOzA97aknHXqjo+4phzzfKLrFm/DMCxf8tbJDb2EB587xVN35M/LzZmRhCb/buzesD5B7z7bx8iUzrK4Ol96LomtFIRau0uM40xXbxqdPGBpCaysaGjiBVFSEkJHCFl0xw4c1+zeng5Bl6J8/+PiRk2M6zXtyZMRFOo3Hj7k2jw7S6QJ605UV1fbqtmgD78pII3lmMkEUfeKQ9SOT0XCmUPCijYmmFWh9VtIDC54uRWfR+kI5a2kJ8/OYmOBj8du3uduVuHULw8McLe/fjwru3cPw8Hr5LZvF27fo7eXjhWQS5eXFT8pUKPK4OWWXbWN8HM3N2LYtJE1HH7HAnSfnlsnUFHdBThtuWeo4L5rlFfkh25f9+/19gAwYg4N8duy0OVrwIQ+kJB0def1bR4dyPH1nJ0Q8uVtYIJ9ily5pfNuJPKL19/vvBcmBgo7NKPm70pYWqZY4owL4uDXKzVjhijU04OtX6YxCty9fOHdpPZ+0hOXJJFcX7nwSwMWLGhMzxaVVIhw6hLk5d4sxt+lpbN+u2GunlZG7k3v+PH788BIT3Do7tRHNOc2xhLWSWCqFu3fdUtFXKx8+rKgX3fQNoawMR4/yIOfXLyVXyL0gZ1AXccTjfH0/leIQf/06Xr+Wg3FVJ4adm/4DPTL03Gg4b7wAAAAASUVORK5CYII=">
   <h1>Skier Capital Valuation</h1>
   <span id="updated">loading…</span>
 </header>
