@@ -27,7 +27,7 @@ moves after each market's close regardless of the Sydney day of week.
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
@@ -55,8 +55,15 @@ CATS = ["AU", "US", "UK", "EU", "ASIA"]
 FX_CCYS = ["USD", "GBP", "EUR", "HKD", "SGD", "JPY"]  # vs AUD
 
 
-def due_exchanges():
-    """Which exchanges should this run update?"""
+def due_exchanges(checked):
+    """Which exchanges should this run update?
+
+    GitHub's cron fires late — sometimes by hours — so never demand
+    punctuality. An exchange is due when its most recent post-close check
+    moment (its check hour on the latest weekday) has passed but no check
+    has been recorded since. Any run, however delayed, then catches up
+    every exchange whose close slipped through.
+    """
     forced = os.environ.get("MARKETS", "").strip()
     if forced:
         return [m for m in forced.upper().split(",") if m in EXCHANGES]
@@ -65,7 +72,17 @@ def due_exchanges():
     due = []
     for m, ex in EXCHANGES.items():
         now = datetime.now(ZoneInfo(ex["tz"]))
-        if now.hour == ex["hour"] and now.weekday() < 5:
+        cand = now.replace(hour=ex["hour"], minute=0, second=0, microsecond=0)
+        if cand > now:
+            cand -= timedelta(days=1)
+        while cand.weekday() >= 5:  # roll back over weekends
+            cand -= timedelta(days=1)
+        prev = checked.get(m)
+        try:
+            prev_dt = datetime.fromisoformat(prev) if prev else None
+        except ValueError:
+            prev_dt = None
+        if prev_dt is None or prev_dt < cand:
             due.append(m)
     return due
 
@@ -115,12 +132,6 @@ def fetch_fx():
 
 
 def main():
-    due = due_exchanges()
-    if not due:
-        print("No exchange is due at this time — nothing to do.")
-        sys.exit(0)
-    print("Updating exchanges:", ", ".join(due))
-
     with open(HOLDINGS_PATH) as f:
         holdings = json.load(f).get("holdings", [])
 
@@ -134,6 +145,12 @@ def main():
             checked = prev.get("checked", {})
         except Exception:
             pass
+
+    due = due_exchanges(checked)
+    if not due:
+        print("All exchanges already checked since their last close — nothing to do.")
+        sys.exit(0)
+    print("Updating exchanges:", ", ".join(due))
 
     data = {"prices": {}, "fx": {}, "tiles": {}, "checked": checked,
             "history": history, "errors": []}
