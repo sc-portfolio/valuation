@@ -41,7 +41,7 @@ header .logo{height:24px;width:auto;align-self:center}
 h2{font-size:14px;font-weight:600;color:var(--ink-2);margin:0 0 10px}
 /* ---- tiles ---- */
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}}
 .tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
 .tile .label{font-size:13px;color:var(--ink-2)}
 .tile .value{font-size:clamp(18px,5.2vw,24px);font-weight:600;margin-top:2px;white-space:nowrap}
@@ -117,17 +117,28 @@ code{background:var(--page);border:1px solid var(--grid);border-radius:4px;paddi
 <div class="card" id="manage">
   <h2>Manage holdings</h2>
   <form class="add" id="addform">
-    <select id="f-market" aria-label="Market">
-      <option value="AU">Australia</option>
+    <select id="f-market" aria-label="Exchange">
+      <option value="AU">Australia (ASX)</option>
       <option value="US">USA</option>
-      <option value="UK">UK</option>
+      <option value="UK">UK (London)</option>
+      <optgroup label="Europe (€)">
+        <option value="FR">France (Paris)</option>
+        <option value="NL">Netherlands (Amsterdam)</option>
+        <option value="DE">Germany (Frankfurt)</option>
+        <option value="BE">Belgium (Brussels)</option>
+      </optgroup>
+      <optgroup label="Asia">
+        <option value="HK">Hong Kong</option>
+        <option value="SG">Singapore</option>
+        <option value="JP">Japan (Tokyo)</option>
+      </optgroup>
     </select>
     <input id="f-code" placeholder="Code e.g. BHP" autocapitalize="characters" required>
     <input id="f-qty" placeholder="Quantity" type="number" step="any" min="0" required>
     <input id="f-price" placeholder="Purchase price" type="number" step="any" min="0" required>
     <button type="submit">Add</button>
   </form>
-  <p class="hint">Purchase price is per share in the market's own currency — A$ for ASX, US$ for USA, and <strong>pounds</strong> for UK (e.g. 7.42, not 742 pence).</p>
+  <p class="hint">Purchase price is per share in the market's own currency — A$ for ASX, US$ for USA, <strong>pounds</strong> for UK (e.g. 7.42, not 742 pence), euros in Europe, and HK$, S$ or ¥ in Asia.</p>
   <div class="rowbtns">
     <button id="save" disabled>Save &amp; publish changes</button>
     <button id="refresh" class="ghost">Fetch latest prices now</button>
@@ -145,10 +156,11 @@ code{background:var(--page);border:1px solid var(--grid);border-radius:4px;paddi
   </details>
 </div>
 
-<p class="hint" id="schednote">Australian tile in AUD, USA in USD, UK in GBP; the
-Total converts everything to AUD at the day's exchange rates. Each market is
-checked about an hour after its own close — ASX ~5pm Sydney, London ~2:30am,
-New York ~7–9am Sydney the next morning.</p>
+<p class="hint" id="schednote">Australia in A$, USA in US$, UK in £, Europe in €; Asia holds several
+currencies so its tile (like the Total) is shown converted to A$ at the day's
+rates. Each exchange is checked about an hour after its own close — Tokyo
+~5:30pm, ASX 5pm, Hong Kong ~7pm, Singapore ~8pm Sydney time, Europe overnight,
+New York ~7–9am the next morning.</p>
 </div>
 
 <script>
@@ -159,9 +171,14 @@ let HOLDINGS = [];        // editable copy of holdings.json
 let SHA = null;           // git blob sha of holdings.json
 let dirty = false;
 
-const MKT = {AU:{label:"Australia",ccy:"AUD",suffix:".AX"},
-             US:{label:"USA",ccy:"USD",suffix:""},
-             UK:{label:"UK",ccy:"GBP",suffix:".L"}};
+const EX = {AU:{ccy:"AUD",suffix:".AX",cat:"AU"}, US:{ccy:"USD",suffix:"",cat:"US"},
+            UK:{ccy:"GBP",suffix:".L",cat:"UK"},
+            FR:{ccy:"EUR",suffix:".PA",cat:"EU"}, NL:{ccy:"EUR",suffix:".AS",cat:"EU"},
+            DE:{ccy:"EUR",suffix:".DE",cat:"EU"}, BE:{ccy:"EUR",suffix:".BR",cat:"EU"},
+            HK:{ccy:"HKD",suffix:".HK",cat:"ASIA"}, SG:{ccy:"SGD",suffix:".SI",cat:"ASIA"},
+            JP:{ccy:"JPY",suffix:".T",cat:"ASIA"}};
+const CATS = {AU:{label:"Australia"}, US:{label:"USA"}, UK:{label:"UK"},
+              EU:{label:"Europe"}, ASIA:{label:"Asia"}};
 
 const $ = id => document.getElementById(id);
 
@@ -176,7 +193,7 @@ function repoInfo(){
 }
 
 /* ---------- formatting ---------- */
-const SYM = {AUD:"A$", USD:"US$", GBP:"£"};
+const SYM = {AUD:"A$", USD:"US$", GBP:"£", EUR:"€", HKD:"HK$", SGD:"S$", JPY:"¥"};
 function money(v, ccy, compact){
   if (v == null || isNaN(v)) return "—";
   return SYM[ccy] + v.toLocaleString("en-AU",
@@ -207,45 +224,53 @@ async function load(){
 
 /* ---------- derived values ---------- */
 function quote(h){
-  const sym = h.code.toUpperCase() + MKT[h.market].suffix;
+  const sym = h.code.toUpperCase() + EX[h.market].suffix;
   return (DATA && DATA.prices && DATA.prices[sym]) || null;
 }
-function subtotals(){
-  const s = {AU:0, US:0, UK:0}; let missing = 0;
-  for (const h of HOLDINGS){
-    const q = quote(h);
-    if (q) s[h.market] += q.price * h.quantity; else missing++;
-  }
-  return {s, missing};
+function fxToAUD(ccy){
+  if (ccy === "AUD") return 1;
+  return DATA && DATA.fx ? DATA.fx[ccy + "AUD"] : null;
 }
-function toAUD(m, v){
-  if (!DATA || !DATA.fx) return null;
-  const r = m==="AU" ? 1 : m==="US" ? DATA.fx.USDAUD : DATA.fx.GBPAUD;
-  return r ? v*r : null;
+function subtotals(){
+  // per-category subtotal in the category's display currency
+  // (ASIA is multi-currency, so it accumulates in AUD), plus AUD total
+  const s = {AU:0, US:0, UK:0, EU:0, ASIA:0}; let total = 0, missing = 0;
+  for (const h of HOLDINGS){
+    const q = quote(h), ex = EX[h.market];
+    if (!q){ missing++; continue; }
+    const local = q.price * h.quantity, r = fxToAUD(ex.ccy), aud = r ? local*r : 0;
+    total += aud;
+    s[ex.cat] += ex.cat === "ASIA" ? aud : local;
+  }
+  return {s, total, missing};
 }
 
 /* ---------- tiles ---------- */
 function renderTiles(){
-  const {s} = subtotals();
-  const totalAUD = ["AU","US","UK"].reduce((t,m)=>t+(toAUD(m,s[m])||0),0);
+  const {s, total} = subtotals();
   const hist = DATA.history||[];
   const prev = hist.length>1 ? hist[hist.length-2] : null;
   const cur  = hist.length   ? hist[hist.length-1] : null;
   const tiles = [
-    {key:"AU", label:"Australia", ccy:"AUD", v:s.AU, pv:prev&&prev.au, cv:cur&&cur.au},
-    {key:"US", label:"USA",       ccy:"USD", v:s.US, pv:prev&&prev.us, cv:cur&&cur.us},
-    {key:"UK", label:"UK",        ccy:"GBP", v:s.UK, pv:prev&&prev.uk, cv:cur&&cur.uk},
-    {key:"T",  label:"Total (AUD)", ccy:"AUD", v:totalAUD, pv:prev&&prev.total_aud, cv:cur&&cur.total_aud, total:true},
+    {key:"AU",   label:"Australia", ccy:"AUD", v:s.AU,   pv:prev&&prev.au, cv:cur&&cur.au},
+    {key:"US",   label:"USA",       ccy:"USD", v:s.US,   pv:prev&&prev.us, cv:cur&&cur.us},
+    {key:"UK",   label:"UK",        ccy:"GBP", v:s.UK,   pv:prev&&prev.uk, cv:cur&&cur.uk},
+    {key:"EU",   label:"Europe",    ccy:"EUR", v:s.EU,   pv:prev&&prev.eu, cv:cur&&cur.eu},
+    {key:"ASIA", label:"Asia (A$)", ccy:"AUD", v:s.ASIA, pv:prev&&prev.asia_aud, cv:cur&&cur.asia_aud},
+    {key:"T",  label:"Total (AUD)", ccy:"AUD", v:total, pv:prev&&prev.total_aud, cv:cur&&cur.total_aud, total:true},
   ];
-  const checked = DATA.checked || {};
+  const checkedEx = DATA.checked || {};
+  const catChecked = k => Object.keys(EX).filter(m=>EX[m].cat===k && checkedEx[m])
+    .map(m=>checkedEx[m]).sort().pop();
   $("tiles").innerHTML = tiles.map(t=>{
     let delta = "";
     if (t.pv != null && t.cv != null && t.pv !== 0){
       const d = t.cv - t.pv, pc = 100*d/t.pv, cls = d>=0?"up":"down", sign = d>=0?"+":"−";
       delta = `<div class="delta ${cls}">${sign}${money(Math.abs(d),t.ccy,true)} (${sign}${Math.abs(pc).toFixed(2)}%) vs prev. day</div>`;
     } else delta = `<div class="delta">day change after two snapshots</div>`;
-    const ts = t.key!=="T" && checked[t.key] ? `<div class="asof">close checked ${
-      new Date(checked[t.key]).toLocaleString("en-AU",{weekday:"short",hour:"numeric",minute:"2-digit"})}</div>` : "";
+    const c = t.key!=="T" && catChecked(t.key);
+    const ts = c ? `<div class="asof">close checked ${
+      new Date(c).toLocaleString("en-AU",{weekday:"short",hour:"numeric",minute:"2-digit"})}</div>` : "";
     return `<div class="tile${t.total?" total":""}">
       <div class="label">${t.label}</div>
       <div class="value">${money(t.v,t.ccy,true)}</div>${delta}${ts}</div>`;
@@ -260,12 +285,12 @@ function renderHoldings(){
   }
   let rows = `<table><thead><tr><th>Share</th><th>Qty</th><th>Paid</th>
     <th>Last close</th><th>Value</th><th>Gain</th><th></th></tr></thead><tbody>`;
-  for (const m of ["AU","US","UK"]){
-    const hs = HOLDINGS.map((h,i)=>({h,i})).filter(x=>x.h.market===m);
+  for (const c of ["AU","US","UK","EU","ASIA"]){
+    const hs = HOLDINGS.map((h,i)=>({h,i})).filter(x=>EX[x.h.market] && EX[x.h.market].cat===c);
     if (!hs.length) continue;
-    rows += `<tr class="mkt"><td colspan="7">${MKT[m].label}</td></tr>`;
+    rows += `<tr class="mkt"><td colspan="7">${CATS[c].label}</td></tr>`;
     for (const {h,i} of hs){
-      const q = quote(h), ccy = MKT[m].ccy;
+      const q = quote(h), ccy = EX[h.market].ccy;
       const val = q ? q.price*h.quantity : null;
       const gain = q ? (q.price-h.purchase_price)*h.quantity : null;
       const gpc  = q && h.purchase_price ? 100*(q.price/h.purchase_price-1) : null;
@@ -291,8 +316,8 @@ function renderChart(){
   const box = $("chartbox");
   const hist = (DATA.history||[]).filter(e=>e.total_aud!=null);
   if (hist.length < 2){
-    box.innerHTML = `<p class="chart-empty">The running total appears here after the
-      first two 4:30pm snapshots${hist.length? " — first one recorded " + fmtDate(hist[0].date):""}.</p>`;
+    box.innerHTML = `<p class="chart-empty">The running total appears here once two
+      days of closes have been recorded${hist.length? " — first one recorded " + fmtDate(hist[0].date):""}.</p>`;
     renderHistTable(hist);
     return;
   }
@@ -348,7 +373,7 @@ function renderChart(){
     hd.setAttribute("cx",px); hd.setAttribute("cy",py); hd.setAttribute("visibility","visible");
     tip.innerHTML = `<span class="tt-date">${new Date(e.date+"T12:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</span><br>
       <span class="tt-val">${money(e.total_aud,"AUD",true)}</span><br>
-      <span class="tt-date">AU ${money(e.au,"AUD",true)} · US ${money(e.us,"USD",true)} · UK ${money(e.uk,"GBP",true)}</span>`;
+      <span class="tt-date">AU ${money(e.au,"AUD",true)} · US ${money(e.us,"USD",true)} · UK ${money(e.uk,"GBP",true)}${e.eu!=null?` · EU ${money(e.eu,"EUR",true)}`:""}${e.asia_aud!=null?` · Asia ${money(e.asia_aud,"AUD",true)}`:""}</span>`;
     tip.style.display = "block";
     const bw = box.clientWidth, tx = px/sx;
     tip.style.left = Math.min(Math.max(tx - tip.offsetWidth/2, 0), bw - tip.offsetWidth) + "px";
@@ -367,9 +392,9 @@ function niceStep(raw){
 function renderHistTable(hist){
   const el = $("histtable");
   const body = hist.length ? `<div class="scroll"><table><thead><tr><th>Date</th><th>Australia (A$)</th>
-    <th>USA (US$)</th><th>UK (£)</th><th>Total (A$)</th></tr></thead><tbody>` +
+    <th>USA (US$)</th><th>UK (£)</th><th>Europe (€)</th><th>Asia (A$)</th><th>Total (A$)</th></tr></thead><tbody>` +
     [...hist].reverse().map(e=>`<tr><td>${e.date}</td><td>${money(e.au,"AUD")}</td>
-      <td>${money(e.us,"USD")}</td><td>${money(e.uk,"GBP")}</td><td>${money(e.total_aud,"AUD")}</td></tr>`).join("")
+      <td>${money(e.us,"USD")}</td><td>${money(e.uk,"GBP")}</td><td>${money(e.eu,"EUR")}</td><td>${money(e.asia_aud,"AUD")}</td><td>${money(e.total_aud,"AUD")}</td></tr>`).join("")
     + "</tbody></table></div>" : "<p class='chart-empty'>No history yet.</p>";
   el.innerHTML = "<summary>View history as a table</summary>" + body;
 }

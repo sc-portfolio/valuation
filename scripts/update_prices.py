@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """Skier Capital Valuation — per-market price checks.
 
-Each market is checked ~1 hour after its own close:
-  ASX  — 5:00pm Sydney      (close 4:00pm)
-  LSE  — 5:30pm London      (close 4:30pm)
-  NYSE — 5:00pm New York    (close 4:00pm)
+Each exchange is checked ~1 hour after its own close:
+  ASX            — 5:00pm Sydney     (close 4:00pm)
+  Tokyo          — 4:30pm Tokyo      (close 3:30pm)
+  Hong Kong      — 5:00pm HK         (close 4:00pm)
+  Singapore      — 6:00pm Singapore  (close 5:00pm)
+  LSE            — 5:30pm London     (close 4:30pm)
+  Euronext/XETRA — 6:30pm CET        (close 5:30pm; shares London's cron slots)
+  NYSE           — 5:00pm New York   (close 4:00pm)
 
-The GitHub Actions cron fires at both possible UTC times for each market
-(to cover daylight saving in each country); this script checks the market's
-own local clock and only updates the markets that are actually due.
-Manual runs (workflow_dispatch) update everything.
+The GitHub Actions cron fires at every candidate UTC time (two per DST-using
+region, one for the fixed-offset Asian exchanges); this script checks each
+exchange's local clock and only updates the ones actually due. Manual runs
+(workflow_dispatch) update everything.
 
-Prices for markets not being checked are carried over from the previous
-data.json, so every run recomputes all four tiles. The history (running
-total) gets one entry per Sydney weekday, finalised by the last run of
-that Sydney day.
+Prices for exchanges not being checked are carried over from the previous
+data.json, so every run recomputes all tiles. Tiles are grouped by category:
+Australia (A$), USA (US$), UK (£), Europe (€ — euro-zone exchanges), Asia
+(mixed currencies, displayed converted to A$), plus the AUD Total.
+
+Every run upserts the history entry for the current Sydney date, so the chart
+moves after each market's close regardless of the Sydney day of week.
 """
 
 import json
@@ -30,34 +37,41 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOLDINGS_PATH = os.path.join(ROOT, "holdings.json")
 DATA_PATH = os.path.join(ROOT, "data.json")
 
-MARKET_SUFFIX = {"AU": ".AX", "UK": ".L", "US": ""}
-MARKET_CCY = {"AU": "AUD", "UK": "GBP", "US": "USD"}
-MARKET_TZ = {
-    "AU": ZoneInfo("Australia/Sydney"),
-    "UK": ZoneInfo("Europe/London"),
-    "US": ZoneInfo("America/New_York"),
+# exchange -> Yahoo suffix, quote currency, tile category, local tz,
+# local hour in which its post-close check runs (some crons fire at :30)
+EXCHANGES = {
+    "AU": {"suffix": ".AX", "ccy": "AUD", "cat": "AU",   "tz": "Australia/Sydney",  "hour": 17},
+    "US": {"suffix": "",    "ccy": "USD", "cat": "US",   "tz": "America/New_York",  "hour": 17},
+    "UK": {"suffix": ".L",  "ccy": "GBP", "cat": "UK",   "tz": "Europe/London",     "hour": 17},
+    "FR": {"suffix": ".PA", "ccy": "EUR", "cat": "EU",   "tz": "Europe/Paris",      "hour": 18},
+    "NL": {"suffix": ".AS", "ccy": "EUR", "cat": "EU",   "tz": "Europe/Amsterdam",  "hour": 18},
+    "BE": {"suffix": ".BR", "ccy": "EUR", "cat": "EU",   "tz": "Europe/Brussels",   "hour": 18},
+    "DE": {"suffix": ".DE", "ccy": "EUR", "cat": "EU",   "tz": "Europe/Berlin",     "hour": 18},
+    "HK": {"suffix": ".HK", "ccy": "HKD", "cat": "ASIA", "tz": "Asia/Hong_Kong",    "hour": 17},
+    "SG": {"suffix": ".SI", "ccy": "SGD", "cat": "ASIA", "tz": "Asia/Singapore",    "hour": 18},
+    "JP": {"suffix": ".T",  "ccy": "JPY", "cat": "ASIA", "tz": "Asia/Tokyo",        "hour": 16},
 }
-# The local hour (market's own clock) in which its post-close check runs.
-CHECK_HOUR = {"AU": 17, "UK": 17, "US": 17}  # LSE run fires at :30 past
+CATS = ["AU", "US", "UK", "EU", "ASIA"]
+FX_CCYS = ["USD", "GBP", "EUR", "HKD", "SGD", "JPY"]  # vs AUD
 
 
-def due_markets():
-    """Which markets should this run update?"""
+def due_exchanges():
+    """Which exchanges should this run update?"""
     forced = os.environ.get("MARKETS", "").strip()
     if forced:
-        return [m for m in forced.upper().split(",") if m in MARKET_TZ]
+        return [m for m in forced.upper().split(",") if m in EXCHANGES]
     if os.environ.get("GITHUB_EVENT_NAME", "") != "schedule":
-        return ["AU", "US", "UK"]  # manual runs refresh everything
+        return list(EXCHANGES)  # manual runs refresh everything
     due = []
-    for m, tz in MARKET_TZ.items():
-        now = datetime.now(tz)
-        if now.hour == CHECK_HOUR[m] and now.weekday() < 5:
+    for m, ex in EXCHANGES.items():
+        now = datetime.now(ZoneInfo(ex["tz"]))
+        if now.hour == ex["hour"] and now.weekday() < 5:
             due.append(m)
     return due
 
 
 def yahoo_symbol(h):
-    return h["code"].upper().strip() + MARKET_SUFFIX[h["market"]]
+    return h["code"].upper().strip() + EXCHANGES[h["market"]]["suffix"]
 
 
 def fetch_quote(symbol):
@@ -90,21 +104,22 @@ def fetch_quote(symbol):
 
 
 def fetch_fx():
-    fx = {}
-    for pair, symbol in (("USDAUD", "USDAUD=X"), ("GBPAUD", "GBPAUD=X")):
+    fx = {"AUDAUD": 1.0}
+    for ccy in FX_CCYS:
+        symbol = f"{ccy}AUD=X"
         hist = yf.Ticker(symbol).history(period="5d")
         if hist.empty:
             raise ValueError(f"no FX data for {symbol}")
-        fx[pair] = float(hist["Close"].dropna().iloc[-1])
+        fx[f"{ccy}AUD"] = float(hist["Close"].dropna().iloc[-1])
     return fx
 
 
 def main():
-    due = due_markets()
+    due = due_exchanges()
     if not due:
-        print("No market is due at this time — nothing to do.")
+        print("No exchange is due at this time — nothing to do.")
         sys.exit(0)
-    print("Updating markets:", ", ".join(due))
+    print("Updating exchanges:", ", ".join(due))
 
     with open(HOLDINGS_PATH) as f:
         holdings = json.load(f).get("holdings", [])
@@ -126,51 +141,57 @@ def main():
     fx = fetch_fx()
     data["fx"] = {k: round(v, 6) for k, v in fx.items()}
 
+    def to_aud(ccy, amount):
+        return amount * fx[f"{ccy}AUD"]
+
     now_syd = datetime.now(SYDNEY)
-    subtotals = {"AU": 0.0, "US": 0.0, "UK": 0.0}
+    # subtotal per category, in the category's display currency
+    # (AU/US/UK/EU in their own currency; ASIA converted to AUD per holding)
+    subtotals = {c: 0.0 for c in CATS}
+    total_aud = 0.0
     for h in holdings:
+        if h["market"] not in EXCHANGES:
+            data["errors"].append(f"{h['code']}: unknown market {h['market']}")
+            continue
+        ex = EXCHANGES[h["market"]]
         symbol = yahoo_symbol(h)
-        # Fetch when the market is due, or when we hold no price yet
-        # (e.g. a share added since the last check of its market).
+        # Fetch when the exchange is due, or when we hold no price yet
+        # (e.g. a share added since the last check of its exchange).
         if h["market"] in due or symbol not in old_prices:
             try:
                 price, ccy, name = fetch_quote(symbol)
             except Exception as e:
                 print(f"WARN {symbol}: {e}")
                 data["errors"].append(f"{symbol}: {e}")
-                if symbol in old_prices:  # keep the stale price over nothing
-                    data["prices"][symbol] = old_prices[symbol]
-                    subtotals[h["market"]] += old_prices[symbol]["price"] * float(h["quantity"])
-                continue
-            expected = MARKET_CCY[h["market"]]
-            if ccy and ccy != expected:
-                data["errors"].append(f"{symbol}: quoted in {ccy}, expected {expected}")
-            data["prices"][symbol] = {
-                "price": round(price, 4),
-                "currency": expected,
-                "name": name or h["code"].upper(),
-            }
-        else:
-            data["prices"][symbol] = old_prices[symbol]
-        subtotals[h["market"]] += data["prices"][symbol]["price"] * float(h["quantity"])
+                if symbol not in old_prices:
+                    continue
+            else:
+                if ccy and ccy != ex["ccy"]:
+                    data["errors"].append(f"{symbol}: quoted in {ccy}, expected {ex['ccy']}")
+                old_prices[symbol] = {
+                    "price": round(price, 4),
+                    "currency": ex["ccy"],
+                    "name": name or h["code"].upper(),
+                }
+        data["prices"][symbol] = old_prices[symbol]
+        value_local = old_prices[symbol]["price"] * float(h["quantity"])
+        value_aud = to_aud(ex["ccy"], value_local)
+        total_aud += value_aud
+        subtotals[ex["cat"]] += value_aud if ex["cat"] == "ASIA" else value_local
 
     for m in due:
         data["checked"][m] = now_syd.isoformat(timespec="seconds")
-
-    to_aud = {"AU": 1.0, "US": fx["USDAUD"], "UK": fx["GBPAUD"]}
-    total_aud = sum(subtotals[m] * to_aud[m] for m in subtotals)
 
     data["tiles"] = {
         "AU": round(subtotals["AU"], 2),
         "US": round(subtotals["US"], 2),
         "UK": round(subtotals["UK"], 2),
+        "EU": round(subtotals["EU"], 2),
+        "ASIA_AUD": round(subtotals["ASIA"], 2),
         "TOTAL_AUD": round(total_aud, 2),
     }
 
-    # Every check upserts the history entry for the current Sydney date, so
-    # the chart moves ~1h after each market's close regardless of the Sydney
-    # day of week. NYSE/LSE Friday closes land Saturday morning Sydney and
-    # produce a Saturday point that completes the global trading week.
+    # Every check upserts the history entry for the current Sydney date.
     # (No entry while the portfolio is empty — a $0 point would be noise.)
     if holdings:
         entry = {
@@ -178,9 +199,10 @@ def main():
             "au": data["tiles"]["AU"],
             "us": data["tiles"]["US"],
             "uk": data["tiles"]["UK"],
+            "eu": data["tiles"]["EU"],
+            "asia_aud": data["tiles"]["ASIA_AUD"],
             "total_aud": data["tiles"]["TOTAL_AUD"],
-            "usdaud": data["fx"]["USDAUD"],
-            "gbpaud": data["fx"]["GBPAUD"],
+            "fx": {k: data["fx"][k] for k in data["fx"] if k != "AUDAUD"},
         }
         data["history"] = [e for e in data["history"] if e["date"] != entry["date"]]
         data["history"].append(entry)

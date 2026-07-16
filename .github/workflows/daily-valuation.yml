@@ -7,8 +7,11 @@ on:
     # clock and only updates the ones actually due, so the extras no-op.
     - cron: "0 6 * * 1-5"    # 5:00pm Sydney during AEDT (ASX)
     - cron: "0 7 * * 1-5"    # 5:00pm Sydney during AEST (ASX)
-    - cron: "30 16 * * 1-5"  # 5:30pm London during BST (LSE)
-    - cron: "30 17 * * 1-5"  # 5:30pm London during GMT (LSE)
+    - cron: "30 7 * * 1-5"   # 4:30pm Tokyo (no DST)
+    - cron: "0 9 * * 1-5"    # 5:00pm Hong Kong (no DST)
+    - cron: "0 10 * * 1-5"   # 6:00pm Singapore (no DST)
+    - cron: "30 16 * * 1-5"  # 5:30pm London during BST / 6:30pm CET summer (LSE + Euronext/XETRA)
+    - cron: "30 17 * * 1-5"  # 5:30pm London during GMT / 6:30pm CET winter (LSE + Euronext/XETRA)
     - cron: "0 21 * * 1-5"   # 5:00pm New York during EDT (NYSE)
     - cron: "0 22 * * 1-5"   # 5:00pm New York during EST (NYSE)
   workflow_dispatch: {}
