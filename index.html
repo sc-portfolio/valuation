@@ -284,21 +284,27 @@ function renderHoldings(){
     return;
   }
   let rows = `<table><thead><tr><th>Share</th><th>Qty</th><th>Paid</th>
-    <th>Last close</th><th>Value</th><th>Gain</th><th></th></tr></thead><tbody>`;
+    <th>Last close</th><th>Day</th><th>Value</th><th>Gain</th><th></th></tr></thead><tbody>`;
   for (const c of ["AU","US","UK","EU","ASIA"]){
     const hs = HOLDINGS.map((h,i)=>({h,i})).filter(x=>EX[x.h.market] && EX[x.h.market].cat===c);
     if (!hs.length) continue;
-    rows += `<tr class="mkt"><td colspan="7">${CATS[c].label}</td></tr>`;
+    rows += `<tr class="mkt"><td colspan="8">${CATS[c].label}</td></tr>`;
     for (const {h,i} of hs){
       const q = quote(h), ccy = EX[h.market].ccy;
       const val = q ? q.price*h.quantity : null;
       const gain = q ? (q.price-h.purchase_price)*h.quantity : null;
       const gpc  = q && h.purchase_price ? 100*(q.price/h.purchase_price-1) : null;
+      const dd   = q && q.prev != null ? q.price - q.prev : null;
+      const ddpc = dd != null && q.prev ? 100*dd/q.prev : null;
+      const fmtd = v => { const a=Math.abs(v);
+        return SYM[ccy] + (a>=0.01 ? a.toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2}) : a.toFixed(4)); };
       rows += `<tr>
         <td><strong>${h.code.toUpperCase()}</strong>${q&&q.name&&q.name!==h.code.toUpperCase()?`<span class="name">${q.name}</span>`:""}</td>
         <td>${h.quantity.toLocaleString("en-AU")}</td>
         <td>${money(h.purchase_price,ccy)}</td>
         <td>${q?money(q.price,ccy):`<span class="pending">pending</span>`}</td>
+        <td class="${dd==null?"":dd>=0?"up":"down"}">${dd==null?"—":
+          (dd>=0?"+":"−")+fmtd(dd)+(ddpc!=null?` (${dd>=0?"+":"−"}${Math.abs(ddpc).toFixed(2)}%)`:"")}</td>
         <td>${q?money(val,ccy):"—"}</td>
         <td class="${gain==null?"":gain>=0?"up":"down"}">${gain==null?"—":
           (gain>=0?"+":"−")+money(Math.abs(gain),ccy,true)+(gpc!=null?` (${gain>=0?"+":"−"}${Math.abs(gpc).toFixed(1)}%)`:"")}</td>

@@ -92,12 +92,14 @@ def yahoo_symbol(h):
 
 
 def fetch_quote(symbol):
-    """Return (last_close, currency, name) for a Yahoo symbol."""
+    """Return (last_close, prev_close, currency, name) for a Yahoo symbol."""
     t = yf.Ticker(symbol)
-    hist = t.history(period="5d", auto_adjust=False)
+    hist = t.history(period="10d", auto_adjust=False)
     if hist.empty:
         raise ValueError(f"no price data for {symbol}")
-    price = float(hist["Close"].dropna().iloc[-1])
+    closes = hist["Close"].dropna()
+    price = float(closes.iloc[-1])
+    prev = float(closes.iloc[-2]) if len(closes) >= 2 else None
     currency, name = None, None
     try:
         fi = t.fast_info
@@ -111,13 +113,14 @@ def fetch_quote(symbol):
     except Exception:
         pass
     # LSE quotes arrive in pence (GBp/GBX) — normalise to pounds.
-    if currency and currency.lower() in ("gbp", "gbx") and currency != "GBP":
+    pence = (currency and currency.lower() in ("gbp", "gbx") and currency != "GBP") or \
+            (currency is None and symbol.endswith(".L"))
+    if pence:
         price /= 100.0
+        if prev is not None:
+            prev /= 100.0
         currency = "GBP"
-    elif currency is None and symbol.endswith(".L"):
-        price /= 100.0
-        currency = "GBP"
-    return price, currency, name
+    return price, prev, currency, name
 
 
 def fetch_fx():
@@ -176,7 +179,7 @@ def main():
         # (e.g. a share added since the last check of its exchange).
         if h["market"] in due or symbol not in old_prices:
             try:
-                price, ccy, name = fetch_quote(symbol)
+                price, prev_close, ccy, name = fetch_quote(symbol)
             except Exception as e:
                 print(f"WARN {symbol}: {e}")
                 data["errors"].append(f"{symbol}: {e}")
@@ -187,6 +190,7 @@ def main():
                     data["errors"].append(f"{symbol}: quoted in {ccy}, expected {ex['ccy']}")
                 old_prices[symbol] = {
                     "price": round(price, 4),
+                    "prev": round(prev_close, 4) if prev_close is not None else None,
                     "currency": ex["ccy"],
                     "name": name or h["code"].upper(),
                 }
